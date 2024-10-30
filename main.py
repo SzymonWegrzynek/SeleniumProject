@@ -30,30 +30,72 @@ class CookieClicker:
         return "Cookies accepted"
 
 
-    def set_language(self, language_id: str = "langSelect-PL") -> str:
-        select_language = self.driver.find_element(By.ID, language_id)
+    def set_language(self) -> str:
+        select_language = self.driver.find_element(By.ID, 'langSelect-PL')
         select_language.click()
         WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.ID, 'bigCookie')))
-        return f"Language set to {language_id}"
+        return "Set language"
 
 
-    def click_cookie(self) -> str:
-        for _ in range(50):
-            cookie = self.driver.find_element(By.ID, 'bigCookie')
-            cookie.click()
-        return "Cookie clicked 50 times"
+    def click_cookie(self) -> None:
+        cookie = self.driver.find_element(By.ID, 'bigCookie')
+        cookie.click()
+
+
+    def get_cookies_amount(self) -> str:
+        cookie_amount = self.driver.find_element(By.ID, 'cookies').text
+        return cookie_amount
     
 
     def close_window(self) -> str:
         self.driver.close()
         return "Window closed"
+    
+
+    def buy_upgrade(self) -> list:
+        upgrades_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.crate.upgrade.enabled')
+
+        if upgrades_to_buy:
+            for upgrade in upgrades_to_buy:
+                upgrade.click()  
+                print(f"An upgrade has been purchased: {upgrade}") 
+        else:
+            print("No improvements available for purchase")
+
+        return upgrades_to_buy
+    
+
+    def buy_building(self) -> list:
+        buildings_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.product.unlocked.enabled')
+
+        if buildings_to_buy:
+            for building in buildings_to_buy:
+                building.click()  
+                print(f"A building has been purchased: {building}") 
+        else:
+            print("No buildings available for purchase")
+
+        return buildings_to_buy
 
 
-if __name__ == "__main__":
+def main():
     bot = CookieClicker()
+
     print(bot.open_window())
     print(bot.accept_personal_data())
     print(bot.accept_cookies())
     print(bot.set_language())
-    print(bot.click_cookie())
-    print(bot.close_window())
+
+    try:
+        while True:
+            bot.click_cookie()
+            print(bot.get_cookies_amount())
+            print(bot.buy_upgrade())
+            print(bot.buy_building())
+
+    except KeyboardInterrupt:
+        print(bot.close_window())
+
+
+if __name__ == "__main__":
+    main()
