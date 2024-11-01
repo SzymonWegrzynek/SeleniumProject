@@ -4,82 +4,122 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+class WikiData:
+    def __init__(self) -> None:
+        self.driver = webdriver.Chrome()
+
+    def open_window(self) -> str:
+        self.driver.get('https://cookieclicker.fandom.com/wiki/Upgrades')
+        self.driver.maximize_window()
+        return "Wiki opened and maximized"
+    
+    def close_window(self) -> str:
+        self.driver.close()
+        return "Wiki closed"
+
+    def accept_cookies(self) -> str:
+        accept_cookies = WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-tracking-opt-in-accept="true"]')))
+        accept_cookies.click()
+        return "Cookies accepted - Wiki"
+
+    def get_wiki_upgrade_data(self, ids: list) -> dict:
+        wiki_upgrade_data = {}
+
+        tr_element = self.driver.find_elements(By.CSS_SELECTOR, 'tr')
+
+        for id in ids:
+            for find_id in tr_element:
+                td_element = find_id.find_elements(By.TAG_NAME, 'td')
+
+                if td_element:
+                    row_id = td_element[-1].text.strip()
+
+                if row_id == str(id):
+                    price = find_id.find_element(By.CSS_SELECTOR, 'td[data-sort-value="1E2"]').text
+                    wiki_upgrade_data[id] = price
+                    break
+        
+        return wiki_upgrade_data
+
+
 class CookieClicker:
     def __init__(self) -> None:
         self.driver = webdriver.Chrome()
 
-    
     def open_window(self) -> str:
-        self.driver.get("https://orteil.dashnet.org/cookieclicker/")
+        self.driver.get('https://orteil.dashnet.org/cookieclicker/')
         self.driver.maximize_window()
-        WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.CLASS_NAME, 'fc-button-label')))
-        return "Window opened and maximized"
+        return "Game opened and maximized"
     
-
+    def close_window(self) -> str:
+        self.driver.close()
+        return "Game closed"
+    
     def accept_personal_data(self) -> str:
-        personal_data_confirm = self.driver.find_element(By.CLASS_NAME, 'fc-button-label')
+        personal_data_confirm = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CLASS_NAME, 'fc-button-label'))) 
         personal_data_confirm.click()
-        WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CLASS_NAME, 'cc_btn_accept_all')))
-        return "Personal data accepted"
-
+        return "Personal data accepted - Game"
 
     def accept_cookies(self) -> str:
-        accept_cookies = self.driver.find_element(By.CLASS_NAME, 'cc_btn_accept_all')
+        accept_cookies = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CLASS_NAME, 'cc_btn_accept_all')))
         accept_cookies.click()
-        WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.ID, 'langSelect-PL')))
-        return "Cookies accepted"
-
+        return "Cookies accepted - Game"
 
     def set_language(self) -> str:
-        select_language = self.driver.find_element(By.ID, 'langSelect-PL')
+        select_language = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.ID, 'langSelect-PL')))
         select_language.click()
-        WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.ID, 'bigCookie')))
-        return "Set language"
-
+        return "Set language - Game"
 
     def click_cookie(self) -> None:
         cookie = self.driver.find_element(By.ID, 'bigCookie')
         cookie.click()
 
-
     def get_cookies_amount(self) -> str:
         cookie_amount = self.driver.find_element(By.ID, 'cookies').text
         return cookie_amount
-    
 
-    def close_window(self) -> str:
-        self.driver.close()
-        return "Window closed"
-    
+    def get_upgrade_info(self) -> list:
+        upgrades_id = []
 
-    def buy_upgrade(self) -> list:
         upgrades_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.crate.upgrade.enabled')
 
         if upgrades_to_buy:
             for upgrade in upgrades_to_buy:
-                upgrade.click()  
-                print(f"An upgrade has been purchased: {upgrade}") 
+                id = upgrade.get_attribute('data-id')
+                upgrades_id.append(id)
         else:
-            print("No improvements available for purchase")
+            print("No upgrades available for purchase")
 
-        return upgrades_to_buy
-    
+        return upgrades_id
 
-    def buy_building(self) -> list:
+    def buy_upgrade(self) -> None:
+        pass
+        
+    def get_building_info(self) -> dict:
+        buildings_info = {}
+
         buildings_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.product.unlocked.enabled')
 
         if buildings_to_buy:
             for building in buildings_to_buy:
-                building.click()  
-                print(f"A building has been purchased: {building}") 
+                name = building.find_element(By.CSS_SELECTOR, '.title.productName').text
+                price = building.find_element(By.CSS_SELECTOR, '.price').text
+                buildings_info[name] = price
         else:
             print("No buildings available for purchase")
 
-        return buildings_to_buy
+        return buildings_info
+    
+    def buy_building(self) -> None:
+        pass
 
 
-def main():
+def main() -> None:
     bot = CookieClicker()
+    wiki = WikiData()
+
+    print(wiki.open_window())
+    print(wiki.accept_cookies())
 
     print(bot.open_window())
     print(bot.accept_personal_data())
@@ -89,12 +129,19 @@ def main():
     try:
         while True:
             bot.click_cookie()
+    
             print(bot.get_cookies_amount())
-            print(bot.buy_upgrade())
-            print(bot.buy_building())
-
+            print(bot.get_upgrade_info())
+            print(bot.get_building_info())
+            
+            print(wiki.get_wiki_upgrade_data(bot.get_upgrade_info()))
+            
+            bot.buy_upgrade
+            bot.buy_building
+    
     except KeyboardInterrupt:
         print(bot.close_window())
+        print(wiki.close_window())
 
 
 if __name__ == "__main__":
