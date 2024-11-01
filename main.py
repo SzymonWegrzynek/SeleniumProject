@@ -92,8 +92,17 @@ class CookieClicker:
 
         return upgrades_id
 
-    def buy_upgrade(self) -> None:
-        pass
+    def buy_upgrade(self, upgrades_data: dict, current_amount_of_money: str) -> None:
+        current_money = current_amount_of_money.split()[0]
+
+        for id, price in upgrades_data.items():
+            if current_money >= price:
+                upgrades_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.crate.upgrade.enabled')
+
+                for upgrade in upgrades_to_buy:
+                    upgrade.click()
+                    print(f'Purchased upgrade {id} for {price} cakes')
+                    break
         
     def get_building_info(self) -> dict:
         buildings_info = {}
@@ -110,9 +119,17 @@ class CookieClicker:
 
         return buildings_info
     
-    def buy_building(self) -> None:
-        pass
+    def buy_building(self, buildings_data: dict, current_amount_of_money: str) -> None:
+        current_money = current_amount_of_money.split()[0]
 
+        for name, price in buildings_data.items():
+            if current_money >= price:
+                buildings_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.product.unlocked.enabled')
+
+                for building in buildings_to_buy:
+                    building.click()
+                    print(f'Purchased building {name} for {price} cakes')
+                    break
 
 def main() -> None:
     bot = CookieClicker()
@@ -129,15 +146,21 @@ def main() -> None:
     try:
         while True:
             bot.click_cookie()
-    
-            print(bot.get_cookies_amount())
-            print(bot.get_upgrade_info())
-            print(bot.get_building_info())
+
+            current_amount_of_money = bot.get_cookies_amount()
+            print(current_amount_of_money)
+
+            upgrades_ids = bot.get_upgrade_info()
+            print(upgrades_ids)
+
+            buildings_data = bot.get_building_info()
+            print(buildings_data)
+
+            upgrades_data = wiki.get_wiki_upgrade_data(upgrades_ids)
+            print(upgrades_data)
             
-            print(wiki.get_wiki_upgrade_data(bot.get_upgrade_info()))
-            
-            bot.buy_upgrade
-            bot.buy_building
+            bot.buy_upgrade(upgrades_data, current_amount_of_money)
+            bot.buy_building(buildings_data, current_amount_of_money)
     
     except KeyboardInterrupt:
         print(bot.close_window())
