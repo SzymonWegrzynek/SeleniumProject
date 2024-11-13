@@ -4,23 +4,61 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class WikiData:
+class WikiDataBuilding:
+    def __init__(self) -> None:
+        self.driver = webdriver.Chrome()
+
+    def open_window(self) -> str:
+        self.driver.get('https://cookieclicker.fandom.com/wiki/Building')
+        self.driver.maximize_window()
+        return "WikiBuilding opened and maximized"
+    
+    def close_window(self) -> str:
+        self.driver.close()
+        return "WikiBuilding closed"
+    
+    def accept_cookies(self) -> str:
+        accept_cookies = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-tracking-opt-in-accept="true"]')))
+        accept_cookies.click()
+        return "Cookies accepted - WikiBuilding"
+    
+    def get_wiki_building_data(self, data: dict) -> dict:
+        wiki_building_data = {}
+
+        tr_elements = self.driver.find_elements(By.TAG_NAME, 'tr')
+
+        for name, price in data.items():
+            for tr in tr_elements:
+                td_elements = tr.find_elements(By.TAG_NAME, 'td')
+                
+                if len(td_elements) >= 5:
+                    building_name = td_elements[0].text.strip()
+                    
+                    if building_name == name:
+                        cps = td_elements[4].text.strip() 
+                        wiki_building_data[name] = cps
+                        break  
+
+        return wiki_building_data
+
+
+class WikiDataUpgrade:
     def __init__(self) -> None:
         self.driver = webdriver.Chrome()
 
     def open_window(self) -> str:
         self.driver.get('https://cookieclicker.fandom.com/wiki/Upgrades')
         self.driver.maximize_window()
-        return "Wiki opened and maximized"
+        return "WikiUpgrade opened and maximized"
     
     def close_window(self) -> str:
         self.driver.close()
-        return "Wiki closed"
+        return "WikiUpgrade closed"
 
     def accept_cookies(self) -> str:
-        accept_cookies = WebDriverWait(self.driver, 2).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-tracking-opt-in-accept="true"]')))
+        accept_cookies = WebDriverWait(self.driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div[data-tracking-opt-in-accept="true"]')))
         accept_cookies.click()
-        return "Cookies accepted - Wiki"
+        return "Cookies accepted - WikiUpgrade"
 
     def get_wiki_upgrade_data(self, ids: list) -> dict:
         wiki_upgrade_data = {}
@@ -56,17 +94,17 @@ class CookieClicker:
         return "Game closed"
     
     def accept_personal_data(self) -> str:
-        personal_data_confirm = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CLASS_NAME, 'fc-button-label'))) 
+        personal_data_confirm = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CLASS_NAME, 'fc-button-label'))) 
         personal_data_confirm.click()
         return "Personal data accepted - Game"
 
     def accept_cookies(self) -> str:
-        accept_cookies = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.CLASS_NAME, 'cc_btn_accept_all')))
+        accept_cookies = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.CLASS_NAME, 'cc_btn_accept_all')))
         accept_cookies.click()
         return "Cookies accepted - Game"
 
     def set_language(self) -> str:
-        select_language = WebDriverWait(self.driver, 2).until(EC.element_to_be_clickable((By.ID, 'langSelect-PL')))
+        select_language = WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable((By.ID, 'langSelect-EN')))
         select_language.click()
         return "Set language - Game"
 
@@ -87,8 +125,6 @@ class CookieClicker:
             for upgrade in upgrades_to_buy:
                 id = upgrade.get_attribute('data-id')
                 upgrades_id.append(id)
-        else:
-            print("No upgrades available for purchase")
 
         return upgrades_id
 
@@ -114,8 +150,6 @@ class CookieClicker:
                 name = building.find_element(By.CSS_SELECTOR, '.title.productName').text
                 price = building.find_element(By.CSS_SELECTOR, '.price').text
                 buildings_info[name] = price
-        else:
-            print("No buildings available for purchase")
 
         return buildings_info
     
@@ -131,40 +165,71 @@ class CookieClicker:
                     print(f'Purchased building {name} for {price} cakes')
                     break
 
+    def get_disabled_building_info(self) -> dict:
+        disabled_buildings_info = {}
+
+        disabled_buildings_to_buy = self.driver.find_elements(By.CSS_SELECTOR, '.product.unlocked.disabled')
+
+        if disabled_buildings_to_buy:
+            for building in disabled_buildings_to_buy:
+                name = building.find_element(By.CSS_SELECTOR, '.title.productName').text
+                price = building.find_element(By.CSS_SELECTOR, '.price').text
+                disabled_buildings_info[name] = price
+
+        return disabled_buildings_info
+    
+    def algorithm(self, upgrades: dict, buildings: dict, disabled_buildings: dict) -> None:
+        pass
+
+
 def main() -> None:
     bot = CookieClicker()
-    wiki = WikiData()
+    wiki_upgrade = WikiDataUpgrade()
+    wiki_building = WikiDataBuilding()
 
-    print(wiki.open_window())
-    print(wiki.accept_cookies())
-
+    print('\n' + '=' * 40)
+    print(wiki_building.open_window())
+    print(wiki_building.accept_cookies())
+    print('-' * 40)
+    print(wiki_upgrade.open_window())
+    print(wiki_upgrade.accept_cookies())
+    print('-' * 40)
     print(bot.open_window())
     print(bot.accept_personal_data())
     print(bot.accept_cookies())
     print(bot.set_language())
+    print('=' * 40 + '\n')
 
     try:
         while True:
             bot.click_cookie()
-
-            current_amount_of_money = bot.get_cookies_amount()
-            print(current_amount_of_money)
-
-            upgrades_ids = bot.get_upgrade_info()
-            print(upgrades_ids)
-
-            buildings_data = bot.get_building_info()
-            print(buildings_data)
-
-            upgrades_data = wiki.get_wiki_upgrade_data(upgrades_ids)
-            print(upgrades_data)
             
-            bot.buy_upgrade(upgrades_data, current_amount_of_money)
+            current_amount_of_money = bot.get_cookies_amount()
+            upgrades_ids = bot.get_upgrade_info()
+            buildings_data = bot.get_building_info()
+            disabled_buildings_data = bot.get_disabled_building_info()
+            buildings_cps_data_available = wiki_building.get_wiki_building_data(buildings_data)
+            buildings_cps_data_disabled = wiki_building.get_wiki_building_data(disabled_buildings_data)
+            upgrades_price_data = wiki_upgrade.get_wiki_upgrade_data(upgrades_ids)
+
+            print('\n' + '=' * 40)
+            print(f'Current amount of money -> {current_amount_of_money}')
+            print('-' * 40)
+            print(f'Available upgrades -> {upgrades_price_data}')
+            print('-' * 40)
+            print(f'Available buildings -> {buildings_data}')
+            print(f'Disabled buildings -> {disabled_buildings_data}')
+            print(f'CpS data for available buildings -> {buildings_cps_data_available}')
+            print(f'CpS data for disabled buildings -> {buildings_cps_data_disabled}')
+            print('=' * 40 + '\n')
+            
+            bot.buy_upgrade(upgrades_price_data, current_amount_of_money)
             bot.buy_building(buildings_data, current_amount_of_money)
     
     except KeyboardInterrupt:
         print(bot.close_window())
-        print(wiki.close_window())
+        print(wiki_upgrade.close_window())
+        print(wiki_building.close_window())
 
 
 if __name__ == "__main__":
