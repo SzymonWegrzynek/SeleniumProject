@@ -2,7 +2,6 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import threading
 
 
 class CookieBot:
@@ -48,7 +47,6 @@ class CookieBot:
         const upgradesData = {};
         Object.values(Game.UpgradesInStore).forEach(upgrade => {
             upgradesData[upgrade.id] = upgrade.basePrice;
-
         });
         return upgradesData;
         """)
@@ -92,77 +90,61 @@ class CookieBot:
 
         return buildings_info, buildings_cps
 
-    def buy_item(self, item_type: str, css_selector: str, item_data: dict, current_amount_of_money: str) -> None:
-        current_money = current_amount_of_money.split()[0]
-
+    def buy_item(self, item_type: str, css_selector: str, item_data: dict, current_money: str) -> None:        
+        items_to_buy = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+        
         for name_or_id, price in item_data.items():
             if int(current_money) >= int(price):
-                item_to_buy = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+                for item in items_to_buy:
+                    if name_or_id in item.text:
+                        item.click()
+                        print(f'Purchased {item_type} {name_or_id} for {price} cakes')
+                        break   
 
-                for item in item_to_buy:
-                    item.click()
-                    print(f'Purchased {item_type} {name_or_id} for {price} cakes')
-                    break
-    
-    def algorithm(self, current_amount_of_money: str, upgrades: dict, buildings_info: dict, buildings_cps: dict) -> dict:
+    def algorithm(self, current_amount_of_money: str, upgrades: dict, buildings_info: dict, buildings_cps: dict) -> None:
         current_money = current_amount_of_money.split()[0]
 
+        bought_buildings_count = 0
+
         building_efficiency = {}
+            
+        for name, price in buildings_info.items():
+            if name in buildings_cps:
+                cps = buildings_cps[name]
+                building_efficiency[name] = int(price) / float(cps)
 
-        for name, price in buildings_info.items():  
-            if name in buildings_cps: 
-                cps = buildings_cps[name] 
-                price = int(price) 
-                building_efficiency[name] = price / cps 
-
-        sorted_buildings = sorted(building_efficiency.items(), key=lambda x: x[1])
-
-        for building_name, _ in sorted_buildings:
-            building_price = buildings_info.get(building_name)
-
+        sorted_items = sorted(building_efficiency.items(), key=lambda x: x[1])
+        
+        sorted_upgrades = sorted(upgrades.items(), key=lambda x: int(x[1]))
+        
+        if sorted_items:
+            building_name, _ = sorted_items[0]
+            building_price = buildings_info[building_name]
             if int(current_money) >= int(building_price):
                 self.buy_item('building', '.product.unlocked.enabled', {building_name: building_price}, current_money)
-                break 
 
-        for upgrade_name, upgrade_price in upgrades.items():
-            if int(current_money) >= int(upgrade_price):
-                self.buy_item('upgrade', '.crate.upgrade.enabled', {upgrade_name: upgrade_price}, current_money)
-                break
-
-        return sorted_buildings  
+        # for upgrade_name, upgrade_price in sorted_upgrades:
+        #     if int(current_money) >= int(upgrade_price):
+        #         self.buy_item('upgrade', '.crate.upgrade.enabled', {upgrade_name: upgrade_price}, current_money)
+        #         break  
 
 
 def main() -> None:
     bot = CookieBot()
 
-    print('\n' + '=' * 40)
     print(bot.open_window())
     print(bot.accept_personal_data())
     print(bot.accept_cookies())
     print(bot.set_language())
-    print('=' * 40 + '\n')
 
     try:
         while True:              
-            click_thread = threading.Thread(target=bot.click_cookie)
-            click_thread.daemon = True  
-            click_thread.start()
+            bot.click_cookie()
             
             current_amount_of_money = bot.get_cookies_amount()
             upgrades = bot.get_upgrade_info()
             buildings_info, buildings_cps = bot.get_building_info()
-            algorithm = bot.algorithm(current_amount_of_money, upgrades, buildings_info, buildings_cps)
-
-            print('\n' + '=' * 40)
-            print(f'current amount of money: {current_amount_of_money}')
-            print('-' * 40)
-            print(f'upgrades: {upgrades}')
-            print('-' * 40)
-            print(f'buildings info: {buildings_info}')
-            print(f'buildings cps: {buildings_cps}')
-            print('-' * 40)
-            print(f'algorithm: {algorithm}')
-            print('=' * 40 + '\n')
+            bot.algorithm(current_amount_of_money, upgrades, buildings_info, buildings_cps)
     
     except KeyboardInterrupt:
         print(bot.close_window())
