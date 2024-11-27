@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 class CookieBot:
     def __init__(self) -> None:
         self.driver = webdriver.Chrome()
+        self.bought_buildings_count = 0
 
     def open_window(self) -> str:
         self.driver.get('https://orteil.dashnet.org/cookieclicker/')
@@ -90,43 +91,53 @@ class CookieBot:
 
         return buildings_info, buildings_cps
 
-    def buy_item(self, item_type: str, css_selector: str, item_data: dict, current_money: str) -> None:        
-        items_to_buy = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
-        
-        for name_or_id, price in item_data.items():
-            if int(current_money) >= int(price):
-                for item in items_to_buy:
+    def buy_item(self, item_type: str, css_selector: str, item_data: dict) -> None:  
+        if item_type == "Building":
+            items_to_buy = self.driver.find_elements(By.CSS_SELECTOR, css_selector)
+
+            for name_or_id, price in item_data.items():
+                for item in items_to_buy:   
                     if name_or_id in item.text:
                         item.click()
                         print(f'Purchased {item_type} {name_or_id} for {price} cakes')
                         break   
+        else:
+            item = self.driver.find_element(By.CSS_SELECTOR, css_selector)
 
-    def algorithm(self, current_amount_of_money: str, upgrades: dict, buildings_info: dict, buildings_cps: dict) -> None:
-        current_money = current_amount_of_money.split()[0]
+            for name_or_id, price in item_data.items():
+                item.click()
+                print(f'Purchased {item_type} {name_or_id} for {price} cakes')   
+                break
 
-        bought_buildings_count = 0
+    def algorithm(self, current_money: str, upgrades: dict, buildings_info: dict, buildings_cps: dict) -> None:
+        current_money = current_money.split()[0].replace(",", "")
 
         building_efficiency = {}
             
         for name, price in buildings_info.items():
             if name in buildings_cps:
                 cps = buildings_cps[name]
+                price = price.replace(",", "")
                 building_efficiency[name] = int(price) / float(cps)
 
         sorted_items = sorted(building_efficiency.items(), key=lambda x: x[1])
         
         sorted_upgrades = sorted(upgrades.items(), key=lambda x: int(x[1]))
-        
+
+        if self.bought_buildings_count >= 5 and sorted_upgrades:
+            upgrade_name, upgrade_price = sorted_upgrades[0]
+            if int(current_money) >= int(upgrade_price):
+                self.buy_item('Upgrade', f'[data-id="{upgrade_name}"]', {upgrade_name: upgrade_price})  
+                self.bought_buildings_count = 0
+                return
+            
         if sorted_items:
             building_name, _ = sorted_items[0]
-            building_price = buildings_info[building_name]
+            building_price = buildings_info[building_name].replace(",", "")
             if int(current_money) >= int(building_price):
-                self.buy_item('building', '.product.unlocked.enabled', {building_name: building_price}, current_money)
-
-        # for upgrade_name, upgrade_price in sorted_upgrades:
-        #     if int(current_money) >= int(upgrade_price):
-        #         self.buy_item('upgrade', '.crate.upgrade.enabled', {upgrade_name: upgrade_price}, current_money)
-        #         break  
+                self.buy_item('Building', '.product.unlocked.enabled', {building_name: building_price})
+                self.bought_buildings_count += 1
+                return
 
 
 def main() -> None:
@@ -141,11 +152,11 @@ def main() -> None:
         while True:              
             bot.click_cookie()
             
-            current_amount_of_money = bot.get_cookies_amount()
+            current_money = bot.get_cookies_amount()
             upgrades = bot.get_upgrade_info()
             buildings_info, buildings_cps = bot.get_building_info()
-            bot.algorithm(current_amount_of_money, upgrades, buildings_info, buildings_cps)
-    
+            bot.algorithm(current_money, upgrades, buildings_info, buildings_cps)
+
     except KeyboardInterrupt:
         print(bot.close_window())
 
